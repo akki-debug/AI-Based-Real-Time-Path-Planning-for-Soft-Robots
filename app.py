@@ -74,7 +74,7 @@ def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
 
     # Only create the animation object if it is necessary
     ani = FuncAnimation(fig, update, frames=len(path), interval=500, blit=True)
-    return ani
+    return ani, fig
 
 # Predefined scenarios
 def get_scenarios():
@@ -126,8 +126,7 @@ st.write(f"### {scenario_name}")
 placeholder = st.empty()
 
 # Create animation (we don't save the file, just display it)
-ani = animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon)
+ani, fig = animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon)
 
-# Display animation directly without saving it
-placeholder.pyplot(ani.to_fig())
-
+# Display the animation directly using the figure
+placeholder.pyplot(fig)
