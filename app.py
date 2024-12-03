@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 from PIL import Image
 import random
 
@@ -51,7 +50,7 @@ def random_walk_path(env):
     return path
 
 # Visualization function
-def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
+def plot_robot(grid_size, path, obstacles, robot_icon, obstacle_icon, step):
     fig, ax = plt.subplots(figsize=(6, 6))
 
     # Initial grid setup
@@ -65,16 +64,11 @@ def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
     for obs in obstacles:
         ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
 
-    robot_plot = ax.imshow(robot_icon, extent=(0, 1, 0, 1))  # Initial robot position
+    # Plot the robot's position
+    x, y = path[step]
+    ax.imshow(robot_icon, extent=(y, y + 1, x, x + 1))
 
-    def update(frame):
-        x, y = path[frame]
-        robot_plot.set_extent((y, y + 1, x, x + 1))
-        return robot_plot,
-
-    # Only create the animation object if it is necessary
-    ani = FuncAnimation(fig, update, frames=len(path), interval=500, blit=True)
-    return ani, fig
+    st.pyplot(fig)
 
 # Predefined scenarios
 def get_scenarios():
@@ -119,14 +113,16 @@ env = ComplexEnvironment(grid_size, start, goal, obstacles)
 # Generate a random path
 path = random_walk_path(env)
 
-# Animate the robot's movement
+# Display title
 st.write(f"### {scenario_name}")
 
-# Use st.empty to dynamically update the output without regenerating the entire figure
+# Use st.empty to dynamically update the output
 placeholder = st.empty()
 
-# Create animation (we don't save the file, just display it)
-ani, fig = animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon)
+# Animate robot step by step
+for step in range(len(path)):
+    # Plot the current step of the path
+    plot_robot(grid_size, path, obstacles, robot_icon, obstacle_icon, step)
 
-# Display the animation directly using the figure
-placeholder.pyplot(fig)
+    # Pause for a short period to create the animation effect
+    st.time.sleep(0.5)  # Adjust this to control the animation speed
