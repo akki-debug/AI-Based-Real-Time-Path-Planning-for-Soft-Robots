@@ -1,93 +1,15 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 from PIL import Image
-import heapq
+import time
+from itertools import permutations
 
 # Load icons
-robot_icon = Image.open("robot_icon.png")  # Add a small robot icon (e.g., 32x32 PNG)
-obstacle_icon = Image.open("obstacle_icon.png")  # Add a small obstacle icon (e.g., 32x32 PNG)
+robot_icon = Image.open("robot_icon.png")
+obstacle_icon = Image.open("obstacle_icon.png")
 
-# Define scenarios
-def get_scenarios():
-    return {
-        "Scenario 1: Simple Grid": {
-            "grid_size": (3, 3),
-            "start": (0, 0),
-            "goal": (2, 2),
-            "obstacles": [(1, 1)],
-        },
-        "Scenario 2: Medium Complexity": {
-            "grid_size": (5, 5),
-            "start": (0, 0),
-            "goal": (4, 4),
-            "obstacles": [(1, 1), (2, 2), (3, 3)],
-        },
-        "Scenario 3: High Complexity": {
-            "grid_size": (7, 7),
-            "start": (0, 0),
-            "goal": (6, 6),
-            "obstacles": [(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)],
-        },
-    }
-
-# Function to get valid neighbors in the grid
-def get_neighbors(node, grid_size, obstacles):
-    x, y = node
-    neighbors = []
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
-    for dx, dy in directions:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < grid_size[0] and 0 <= ny < grid_size[1] and (nx, ny) not in obstacles:
-            neighbors.append((nx, ny))
-    return neighbors
-
-# Function to find all paths using DFS
-def find_all_paths(grid_size, start, goal, obstacles):
-    def dfs(node, path):
-        if node == goal:
-            paths.append(list(path))
-            return
-        for neighbor in get_neighbors(node, grid_size, obstacles):
-            if neighbor not in path:  # Avoid cycles
-                path.append(neighbor)
-                dfs(neighbor, path)
-                path.pop()
-
-    paths = []
-    dfs(start, [start])
-    return paths
-
-# Function to find the shortest path using A*
-def find_shortest_path(grid_size, start, goal, obstacles):
-    def heuristic(a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])  # Manhattan distance
-
-    open_set = []
-    heapq.heappush(open_set, (0, start))
-    came_from = {}
-    g_score = {start: 0}
-
-    while open_set:
-        _, current = heapq.heappop(open_set)
-
-        if current == goal:
-            path = []
-            while current in came_from:
-                path.append(current)
-                current = came_from[current]
-            path.append(start)
-            return path[::-1]
-
-        for neighbor in get_neighbors(current, grid_size, obstacles):
-            tentative_g_score = g_score[current] + 1  # Assume uniform cost
-            if tentative_g_score < g_score.get(neighbor, float('inf')):
-                came_from[neighbor] = current
-                g_score[neighbor] = tentative_g_score
-                heapq.heappush(open_set, (tentative_g_score + heuristic(neighbor, goal), neighbor))
-    return []
-
-# Visualization
+# Helper: Visualize grid with paths and robot movement
 def visualize_paths(grid_size, start, goal, obstacles, path, robot_icon, obstacle_icon):
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set_xlim(0, grid_size[1])
@@ -104,46 +26,99 @@ def visualize_paths(grid_size, start, goal, obstacles, path, robot_icon, obstacl
     ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
     ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
 
-    # Draw path
-    for i in range(len(path) - 1):
-        x1, y1 = path[i]
-        x2, y2 = path[i + 1]
-        ax.arrow(y1 + 0.5, x1 + 0.5, y2 - y1, x2 - x1, head_width=0.2, head_length=0.2, fc="blue", ec="blue")
+    # Draw the path dynamically
+    robot_position = start
+    for next_position in path[1:]:
+        ax.imshow(robot_icon, extent=(robot_position[1], robot_position[1] + 1, robot_position[0], robot_position[0] + 1))
 
-    # Draw robot icon at start
-    ax.imshow(robot_icon, extent=(start[1], start[1] + 1, start[0], start[0] + 1))
+        # Update the arrow visualization as the robot moves
+        ax.arrow(robot_position[1] + 0.5, robot_position[0] + 0.5,
+                 next_position[1] - robot_position[1], next_position[0] - robot_position[0],
+                 head_width=0.2, head_length=0.2, fc="blue", ec="blue")
 
+        st.pyplot(fig)  # Display the current state
+        time.sleep(0.5)  # Pause to show movement
+        robot_position = next_position
+        ax.clear()  # Clear the grid for the next step
+
+        # Redraw the grid, obstacles, start, and goal
+        ax.set_xlim(0, grid_size[1])
+        ax.set_ylim(0, grid_size[0])
+        ax.set_xticks(np.arange(grid_size[1]))
+        ax.set_yticks(np.arange(grid_size[0]))
+        ax.grid(True)
+        for obs in obstacles:
+            ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
+        ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
+        ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
+
+    # Final position of the robot
+    ax.imshow(robot_icon, extent=(robot_position[1], robot_position[1] + 1, robot_position[0], robot_position[0] + 1))
     st.pyplot(fig)
 
+# Helper: Find all paths and the shortest path
+def find_paths(grid_size, start, goal, obstacles):
+    queue = [(start, [start])]
+    visited = set()
+    paths = []
+
+    while queue:
+        current, path = queue.pop(0)
+        if current in visited:
+            continue
+        visited.add(current)
+
+        if current == goal:
+            paths.append(path)
+            continue
+
+        x, y = current
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            next_step = (x + dx, y + dy)
+            if 0 <= next_step[0] < grid_size[0] and 0 <= next_step[1] < grid_size[1]:
+                if next_step not in obstacles and next_step not in path:
+                    queue.append((next_step, path + [next_step]))
+
+    shortest_path = min(paths, key=len) if paths else None
+    return paths, shortest_path
+
+# Scenarios
+def scenario_1():
+    return (3, 3), (0, 0), (2, 2), [(1, 1)]
+
+def scenario_2():
+    return (5, 5), (0, 0), (4, 4), [(1, 1), (2, 2), (3, 3)]
+
+def scenario_3():
+    return (7, 7), (0, 0), (6, 6), [(2, 2), (3, 3), (4, 4), (5, 5)]
+
 # Streamlit App
-st.title("Pathfinding Robot Visualization")
+st.title("AI-Based Real-Time Path Planning for Robots")
 
-# Select a scenario
-scenarios = get_scenarios()
-scenario_name = st.selectbox("Choose a Scenario", list(scenarios.keys()))
-scenario = scenarios[scenario_name]
+# Select Scenario
+scenario = st.selectbox("Choose a Scenario", ["Scenario 1", "Scenario 2", "Scenario 3"])
 
-grid_size = scenario["grid_size"]
-start = scenario["start"]
-goal = scenario["goal"]
-obstacles = scenario["obstacles"]
+# Get scenario details
+if scenario == "Scenario 1":
+    grid_size, start, goal, obstacles = scenario_1()
+elif scenario == "Scenario 2":
+    grid_size, start, goal, obstacles = scenario_2()
+else:
+    grid_size, start, goal, obstacles = scenario_3()
 
-st.write(f"### Scenario: {scenario_name}")
-st.write(f"Grid Size: {grid_size}, Start: {start}, Goal: {goal}")
-st.write("Obstacles:", obstacles)
+# Display grid information
+st.write(f"**Grid Size:** {grid_size}")
+st.write(f"**Start Position:** {start}")
+st.write(f"**Goal Position:** {goal}")
+st.write(f"**Obstacles:** {obstacles}")
 
-# Find all paths
-st.write("Finding all paths from Start to Goal...")
-all_paths = find_all_paths(grid_size, start, goal, obstacles)
-st.write(f"Total Paths Found: {len(all_paths)}")
-if all_paths:
-    st.write("Example Path:", all_paths[0])
+# Find paths and visualize
+paths, shortest_path = find_paths(grid_size, start, goal, obstacles)
 
-# Find the shortest path
-shortest_path = find_shortest_path(grid_size, start, goal, obstacles)
-st.write("Shortest Path:", shortest_path)
-
-# Visualize the shortest path
-if shortest_path:
-    st.write("Visualizing the Shortest Path...")
+if paths:
+    st.write(f"**Number of Paths Found:** {len(paths)}")
+    st.write(f"**Shortest Path:** {shortest_path}")
     visualize_paths(grid_size, start, goal, obstacles, shortest_path, robot_icon, obstacle_icon)
+else:
+    st.write("No paths found from start to goal.")
+
