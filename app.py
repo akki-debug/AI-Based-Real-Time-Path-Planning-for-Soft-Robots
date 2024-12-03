@@ -1,9 +1,14 @@
 import streamlit as st
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from PIL import Image
 
-# Simple 3x3 Environment Setup
+# Load icons for robot and obstacles
+robot_icon = Image.open("robot_icon.png")  # Add a small robot icon (e.g., 32x32 PNG)
+obstacle_icon = Image.open("obstacle_icon.png")  # Add a small obstacle icon (e.g., 32x32 PNG)
+
+# Create a simple environment
 class SimpleEnvironment:
     def __init__(self, grid_size, obstacles, start, goal):
         self.grid_size = grid_size
@@ -31,50 +36,71 @@ class SimpleEnvironment:
         if (0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]) and (x, y) not in self.obstacles:
             self.state = (x, y)
 
-        reward = 1 if self.state == self.goal else -1
         done = self.state == self.goal
-        return self.state, reward, done
+        return self.state, done
 
-    def render(self, path):
-        grid = np.zeros(self.grid_size)
-        for obs in self.obstacles:
-            grid[obs] = -1
-        grid[self.goal] = 2
-        for step in path:
-            grid[step] = 0.5
-        grid[self.start] = 1
-        return grid
-
-
-# Streamlit Interface
-st.title("3x3 Robot Path Planning Demo")
-
-# Define the grid and environment
-grid_size = (3, 3)
-obstacles = [(1, 1)]
-start = (0, 0)
-goal = (2, 2)
-
-env = SimpleEnvironment(grid_size, obstacles, start, goal)
-
-# Path Planning Algorithm (Random Walk for Demo)
+# Random walk for demonstration
 def random_walk_path(env):
     path = [env.reset()]
     done = False
     while not done:
         action = np.random.choice(4)  # Random action: 0=Up, 1=Down, 2=Left, 3=Right
-        next_state, _, done = env.step(action)
+        next_state, done = env.step(action)
         path.append(next_state)
     return path
 
-# Generate the path
+# Visualization function
+def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    # Initial grid setup
+    grid = np.zeros(grid_size)
+    for obs in obstacles:
+        grid[obs] = -1
+
+    ax.set_xlim(0, grid_size[1])
+    ax.set_ylim(0, grid_size[0])
+    ax.set_xticks(np.arange(grid_size[1]))
+    ax.set_yticks(np.arange(grid_size[0]))
+    ax.grid(True)
+
+    # Plot obstacles
+    for obs in obstacles:
+        ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
+
+    robot_plot = ax.imshow(robot_icon, extent=(0, 1, 0, 1))  # Initial robot position
+
+    def update(frame):
+        x, y = path[frame]
+        robot_plot.set_extent((y, y + 1, x, x + 1))
+        return robot_plot,
+
+    ani = FuncAnimation(fig, update, frames=len(path), interval=500, blit=True)
+    return ani
+
+# Streamlit UI
+st.title("Real-Time Robot Path Visualization")
+
+grid_size = (3, 3)
+obstacles = [(1, 1)]
+start = (0, 0)
+goal = (2, 2)
+
+# Load the environment
+env = SimpleEnvironment(grid_size, obstacles, start, goal)
+
+# Generate a random path
 path = random_walk_path(env)
 
-# Visualize the environment with path
-grid = env.render(path)
+# Animate the robot's movement
+st.write("### Robot Path Animation")
+ani = animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon)
 
-# Plot the grid
-fig, ax = plt.subplots(figsize=(5, 5))
-sns.heatmap(grid, annot=True, fmt=".1f", cmap="coolwarm", cbar=False, linewidths=0.5, linecolor="black", ax=ax)
-ax.set_title("Robot Path Visualization")
-st.pyplot(fig)
+# Save the animation as an HTML file and display in Streamlit
+from matplotlib.animation import PillowWriter
+
+output_path = "robot_animation.gif"
+ani.save(output_path, writer=PillowWriter(fps=2))
+
+st.image(output_path)
+
