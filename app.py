@@ -3,19 +3,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from PIL import Image
+import random
 
 # Load icons for robot and obstacles
-robot_icon = Image.open("robot_icon.png")  # Add a small robot icon (e.g., 32x32 PNG)
-obstacle_icon = Image.open("obstacle_icon.png")  # Add a small obstacle icon (e.g., 32x32 PNG)
+robot_icon = Image.open("robot_icon.png")
+obstacle_icon = Image.open("obstacle_icon.png")
 
-# Create a simple environment
-class SimpleEnvironment:
-    def __init__(self, grid_size, obstacles, start, goal):
+# Environment class
+class ComplexEnvironment:
+    def __init__(self, grid_size, start, goal, obstacles):
         self.grid_size = grid_size
-        self.obstacles = obstacles
         self.start = start
         self.goal = goal
         self.state = start
+        self.obstacles = obstacles
 
     def reset(self):
         self.state = self.start
@@ -51,13 +52,9 @@ def random_walk_path(env):
 
 # Visualization function
 def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
-    fig, ax = plt.subplots(figsize=(5, 5))
+    fig, ax = plt.subplots(figsize=(6, 6))
 
     # Initial grid setup
-    grid = np.zeros(grid_size)
-    for obs in obstacles:
-        grid[obs] = -1
-
     ax.set_xlim(0, grid_size[1])
     ax.set_ylim(0, grid_size[0])
     ax.set_xticks(np.arange(grid_size[1]))
@@ -78,25 +75,54 @@ def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
     ani = FuncAnimation(fig, update, frames=len(path), interval=500, blit=True)
     return ani
 
-# Streamlit UI
-st.title("Real-Time Robot Path Visualization")
+# Predefined scenarios
+def get_scenarios():
+    scenarios = {
+        "Scenario 1: Basic (3x3 Grid)": {
+            "grid_size": (3, 3),
+            "start": (0, 0),
+            "goal": (2, 2),
+            "obstacles": [(1, 1)],
+        },
+        "Scenario 2: Medium Complexity (5x5 Grid)": {
+            "grid_size": (5, 5),
+            "start": (0, 0),
+            "goal": (4, 4),
+            "obstacles": [(1, 1), (1, 2), (2, 1), (3, 3)],
+        },
+        "Scenario 3: Large Grid (10x10 with Random Obstacles)": {
+            "grid_size": (10, 10),
+            "start": (0, 0),
+            "goal": (9, 9),
+            "obstacles": [(random.randint(1, 9), random.randint(1, 9)) for _ in range(20)],
+        },
+    }
+    return scenarios
 
-grid_size = (3, 3)
-obstacles = [(1, 1)]
-start = (0, 0)
-goal = (2, 2)
+# Streamlit UI
+st.title("Multi-Scenario Robot Path Visualization")
+
+# Select scenario
+scenarios = get_scenarios()
+scenario_name = st.selectbox("Choose a Scenario", list(scenarios.keys()))
+scenario = scenarios[scenario_name]
+
+grid_size = scenario["grid_size"]
+start = scenario["start"]
+goal = scenario["goal"]
+obstacles = scenario["obstacles"]
 
 # Load the environment
-env = SimpleEnvironment(grid_size, obstacles, start, goal)
+env = ComplexEnvironment(grid_size, start, goal, obstacles)
 
 # Generate a random path
 path = random_walk_path(env)
 
 # Animate the robot's movement
-st.write("### Robot Path Animation")
+st.write(f"### {scenario_name}")
 ani = animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon)
 
-# Save the animation as an HTML file and display in Streamlit
+# Save the animation as a GIF and display in Streamlit
 from matplotlib.animation import PillowWriter
 
 output_path = "robot_animation.gif"
