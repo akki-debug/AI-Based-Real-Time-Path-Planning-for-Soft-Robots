@@ -3,14 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import time
-from itertools import permutations
 
 # Load icons
 robot_icon = Image.open("robot_icon.png")
 obstacle_icon = Image.open("obstacle_icon.png")
 
-# Helper: Visualize grid with paths and robot movement
-def visualize_paths(grid_size, start, goal, obstacles, path, robot_icon, obstacle_icon):
+# Helper: Visualize grid with robot movement in real-time
+def visualize_realtime(grid_size, start, goal, obstacles, path, robot_icon, obstacle_icon):
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set_xlim(0, grid_size[1])
     ax.set_ylim(0, grid_size[0])
@@ -26,35 +25,24 @@ def visualize_paths(grid_size, start, goal, obstacles, path, robot_icon, obstacl
     ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
     ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
 
-    # Draw the path dynamically
-    robot_position = start
-    for next_position in path[1:]:
-        ax.imshow(robot_icon, extent=(robot_position[1], robot_position[1] + 1, robot_position[0], robot_position[0] + 1))
+    # Robot's real-time movement
+    for i, position in enumerate(path):
+        ax.imshow(robot_icon, extent=(position[1], position[1] + 1, position[0], position[0] + 1))
+        st.pyplot(fig)  # Update plot in Streamlit
+        if i < len(path) - 1:
+            time.sleep(0.5)  # Pause to simulate movement
+            ax.clear()  # Clear the previous state of the grid
+            ax.set_xlim(0, grid_size[1])
+            ax.set_ylim(0, grid_size[0])
+            ax.set_xticks(np.arange(grid_size[1]))
+            ax.set_yticks(np.arange(grid_size[0]))
+            ax.grid(True)
 
-        # Update the arrow visualization as the robot moves
-        ax.arrow(robot_position[1] + 0.5, robot_position[0] + 0.5,
-                 next_position[1] - robot_position[1], next_position[0] - robot_position[0],
-                 head_width=0.2, head_length=0.2, fc="blue", ec="blue")
-
-        st.pyplot(fig)  # Display the current state
-        time.sleep(0.5)  # Pause to show movement
-        robot_position = next_position
-        ax.clear()  # Clear the grid for the next step
-
-        # Redraw the grid, obstacles, start, and goal
-        ax.set_xlim(0, grid_size[1])
-        ax.set_ylim(0, grid_size[0])
-        ax.set_xticks(np.arange(grid_size[1]))
-        ax.set_yticks(np.arange(grid_size[0]))
-        ax.grid(True)
-        for obs in obstacles:
-            ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
-        ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
-        ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
-
-    # Final position of the robot
-    ax.imshow(robot_icon, extent=(robot_position[1], robot_position[1] + 1, robot_position[0], robot_position[0] + 1))
-    st.pyplot(fig)
+            # Redraw the grid with obstacles
+            for obs in obstacles:
+                ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
+            ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
+            ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
 
 # Helper: Find all paths and the shortest path
 def find_paths(grid_size, start, goal, obstacles):
@@ -118,7 +106,7 @@ paths, shortest_path = find_paths(grid_size, start, goal, obstacles)
 if paths:
     st.write(f"**Number of Paths Found:** {len(paths)}")
     st.write(f"**Shortest Path:** {shortest_path}")
-    visualize_paths(grid_size, start, goal, obstacles, shortest_path, robot_icon, obstacle_icon)
+    visualize_realtime(grid_size, start, goal, obstacles, shortest_path, robot_icon, obstacle_icon)
 else:
     st.write("No paths found from start to goal.")
 
