@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 from PIL import Image
 import random
 
@@ -50,7 +51,7 @@ def random_walk_path(env):
     return path
 
 # Visualization function
-def plot_robot(grid_size, path, obstacles, robot_icon, obstacle_icon, step):
+def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
     fig, ax = plt.subplots(figsize=(6, 6))
 
     # Initial grid setup
@@ -64,11 +65,15 @@ def plot_robot(grid_size, path, obstacles, robot_icon, obstacle_icon, step):
     for obs in obstacles:
         ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
 
-    # Plot the robot's position
-    x, y = path[step]
-    ax.imshow(robot_icon, extent=(y, y + 1, x, x + 1))
+    robot_plot = ax.imshow(robot_icon, extent=(0, 1, 0, 1))  # Initial robot position
 
-    st.pyplot(fig)
+    def update(frame):
+        x, y = path[frame]
+        robot_plot.set_extent((y, y + 1, x, x + 1))
+        return robot_plot,
+
+    ani = FuncAnimation(fig, update, frames=len(path), interval=500, blit=True)
+    return ani
 
 # Predefined scenarios
 def get_scenarios():
@@ -113,16 +118,14 @@ env = ComplexEnvironment(grid_size, start, goal, obstacles)
 # Generate a random path
 path = random_walk_path(env)
 
-# Display title
+# Animate the robot's movement
 st.write(f"### {scenario_name}")
+ani = animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon)
 
-# Use st.empty to dynamically update the output
-placeholder = st.empty()
+# Save the animation as a GIF and display in Streamlit
+from matplotlib.animation import PillowWriter
 
-# Animate robot step by step
-for step in range(len(path)):
-    # Plot the current step of the path
-    plot_robot(grid_size, path, obstacles, robot_icon, obstacle_icon, step)
+output_path = "robot_animation.gif"
+ani.save(output_path, writer=PillowWriter(fps=2))
 
-    # Pause for a short period to create the animation effect
-    st.time.sleep(0.5)  # Adjust this to control the animation speed
+st.image(output_path)             
