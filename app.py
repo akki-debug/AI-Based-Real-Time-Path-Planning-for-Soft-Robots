@@ -72,6 +72,7 @@ def animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon):
         robot_plot.set_extent((y, y + 1, x, x + 1))
         return robot_plot,
 
+    # Only create the animation object if it is necessary
     ani = FuncAnimation(fig, update, frames=len(path), interval=500, blit=True)
     return ani
 
@@ -120,13 +121,13 @@ path = random_walk_path(env)
 
 # Animate the robot's movement
 st.write(f"### {scenario_name}")
+
+# Use st.empty to dynamically update the output without regenerating the entire figure
+placeholder = st.empty()
+
+# Create animation (we don't save the file, just display it)
 ani = animate_robot(grid_size, path, obstacles, robot_icon, obstacle_icon)
 
-# Save the animation as a GIF and display in Streamlit
-from matplotlib.animation import PillowWriter
-
-output_path = "robot_animation.gif"
-ani.save(output_path, writer=PillowWriter(fps=2))
-
-st.image(output_path)
+# Display animation directly without saving it
+placeholder.pyplot(ani.to_fig())
 
