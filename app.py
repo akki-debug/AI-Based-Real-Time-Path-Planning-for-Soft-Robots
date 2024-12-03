@@ -3,19 +3,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import time
+import random
 
-# Load icons
+# Load robot and obstacle icons
 robot_icon = Image.open("robot_icon.png")
 obstacle_icon = Image.open("obstacle_icon.png")
 
-# Helper: Visualize grid with robot movement in real-time
-def visualize_realtime(grid_size, start, goal, obstacles, path, robot_icon, obstacle_icon):
+# Helper: Display a single grid with the robot moving
+def display_grid_with_robot(grid_size, start, goal, path, obstacles, robot_icon):
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set_xlim(0, grid_size[1])
     ax.set_ylim(0, grid_size[0])
     ax.set_xticks(np.arange(grid_size[1]))
     ax.set_yticks(np.arange(grid_size[0]))
     ax.grid(True)
+    ax.set_aspect('equal')
 
     # Draw obstacles
     for obs in obstacles:
@@ -25,88 +27,79 @@ def visualize_realtime(grid_size, start, goal, obstacles, path, robot_icon, obst
     ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
     ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
 
-    # Robot's real-time movement
-    for i, position in enumerate(path):
-        ax.imshow(robot_icon, extent=(position[1], position[1] + 1, position[0], position[0] + 1))
-        st.pyplot(fig)  # Update plot in Streamlit
-        if i < len(path) - 1:
-            time.sleep(0.5)  # Pause to simulate movement
-            ax.clear()  # Clear the previous state of the grid
-            ax.set_xlim(0, grid_size[1])
-            ax.set_ylim(0, grid_size[0])
-            ax.set_xticks(np.arange(grid_size[1]))
-            ax.set_yticks(np.arange(grid_size[0]))
-            ax.grid(True)
+    for step in path:
+        ax.clear()  # Clear the previous state
+        ax.set_xlim(0, grid_size[1])
+        ax.set_ylim(0, grid_size[0])
+        ax.set_xticks(np.arange(grid_size[1]))
+        ax.set_yticks(np.arange(grid_size[0]))
+        ax.grid(True)
+        ax.set_aspect('equal')
 
-            # Redraw the grid with obstacles
-            for obs in obstacles:
-                ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
-            ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
-            ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
+        # Draw obstacles
+        for obs in obstacles:
+            ax.imshow(obstacle_icon, extent=(obs[1], obs[1] + 1, obs[0], obs[0] + 1))
 
-# Helper: Find all paths and the shortest path
-def find_paths(grid_size, start, goal, obstacles):
-    queue = [(start, [start])]
-    visited = set()
-    paths = []
+        # Redraw start and goal
+        ax.text(start[1] + 0.5, start[0] + 0.5, "S", color="green", ha="center", va="center", fontsize=12, weight="bold")
+        ax.text(goal[1] + 0.5, goal[0] + 0.5, "G", color="red", ha="center", va="center", fontsize=12, weight="bold")
 
-    while queue:
-        current, path = queue.pop(0)
-        if current in visited:
-            continue
-        visited.add(current)
+        # Draw robot
+        ax.imshow(robot_icon, extent=(step[1], step[1] + 1, step[0], step[0] + 1))
 
-        if current == goal:
-            paths.append(path)
-            continue
+        # Show the plot
+        st.pyplot(fig)
+        time.sleep(0.5)  # Delay to simulate walking
 
-        x, y = current
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            next_step = (x + dx, y + dy)
-            if 0 <= next_step[0] < grid_size[0] and 0 <= next_step[1] < grid_size[1]:
-                if next_step not in obstacles and next_step not in path:
-                    queue.append((next_step, path + [next_step]))
+# Function to generate random obstacles
+def generate_random_obstacles(grid_size, num_obstacles):
+    obstacles = []
+    while len(obstacles) < num_obstacles:
+        obs = (random.randint(0, grid_size[0] - 1), random.randint(0, grid_size[1] - 1))
+        if obs not in obstacles:
+            obstacles.append(obs)
+    return obstacles
 
-    shortest_path = min(paths, key=len) if paths else None
-    return paths, shortest_path
-
-# Scenarios
-def scenario_1():
-    return (3, 3), (0, 0), (2, 2), [(1, 1)]
-
-def scenario_2():
-    return (5, 5), (0, 0), (4, 4), [(1, 1), (2, 2), (3, 3)]
-
-def scenario_3():
-    return (7, 7), (0, 0), (6, 6), [(2, 2), (3, 3), (4, 4), (5, 5)]
+# Simple pathfinding for demonstration (replace with actual algorithm for a real app)
+def find_simple_path(start, goal, obstacles):
+    # Just return a hardcoded path for demonstration
+    # In a real scenario, a pathfinding algorithm like A* should be used.
+    return [start, (0, 1), (0, 2), (1, 2), goal]
 
 # Streamlit App
-st.title("AI-Based Real-Time Path Planning for Robots")
+st.title("Real-Time Walking Robot")
 
-# Select Scenario
-scenario = st.selectbox("Choose a Scenario", ["Scenario 1", "Scenario 2", "Scenario 3"])
+# Scenario selection
+scenario = st.selectbox("Select a Scenario", ["Scenario 1: 5x5 Grid", "Scenario 2: 7x7 Grid with Obstacles", "Scenario 3: 10x10 Complex Grid"])
 
-# Get scenario details
-if scenario == "Scenario 1":
-    grid_size, start, goal, obstacles = scenario_1()
-elif scenario == "Scenario 2":
-    grid_size, start, goal, obstacles = scenario_2()
-else:
-    grid_size, start, goal, obstacles = scenario_3()
+# Based on the selected scenario, set up the grid size, obstacles, and robot path
+if scenario == "Scenario 1: 5x5 Grid":
+    grid_size = (5, 5)
+    start = (0, 0)
+    goal = (4, 4)
+    obstacles = [(1, 1), (1, 2), (2, 1)]  # Example simple obstacles
+    path = find_simple_path(start, goal, obstacles)
+elif scenario == "Scenario 2: 7x7 Grid with Obstacles":
+    grid_size = (7, 7)
+    start = (0, 0)
+    goal = (6, 6)
+    obstacles = generate_random_obstacles(grid_size, 10)  # Generate 10 random obstacles
+    path = find_simple_path(start, goal, obstacles)
+elif scenario == "Scenario 3: 10x10 Complex Grid":
+    grid_size = (10, 10)
+    start = (0, 0)
+    goal = (9, 9)
+    obstacles = generate_random_obstacles(grid_size, 20)  # Generate 20 random obstacles
+    path = find_simple_path(start, goal, obstacles)
 
-# Display grid information
+# Display scenario information
 st.write(f"**Grid Size:** {grid_size}")
 st.write(f"**Start Position:** {start}")
 st.write(f"**Goal Position:** {goal}")
 st.write(f"**Obstacles:** {obstacles}")
+st.write(f"**Path Taken:** {path}")
 
-# Find paths and visualize
-paths, shortest_path = find_paths(grid_size, start, goal, obstacles)
-
-if paths:
-    st.write(f"**Number of Paths Found:** {len(paths)}")
-    st.write(f"**Shortest Path:** {shortest_path}")
-    visualize_realtime(grid_size, start, goal, obstacles, shortest_path, robot_icon, obstacle_icon)
-else:
-    st.write("No paths found from start to goal.")
+# Display the grid and simulate walking
+if st.button("Start Robot Walk"):
+    display_grid_with_robot(grid_size, start, goal, path, obstacles, robot_icon)
 
