@@ -100,7 +100,7 @@ def get_scenarios():
     return scenarios
 
 # Streamlit UI
-st.title("Multi-Scenario Robot Path Visualization")
+st.title("AI-Based-Real-Time-Path-Planning-for-Soft-Robots")
 
 # Select scenario
 scenarios = get_scenarios()
